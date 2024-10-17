@@ -1,0 +1,552 @@
+---
+title: "Project by Stephanie Miller & Duong Le"
+author: "Duong Le"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+```{r}
+# Clear environment of variables and functions
+rm(list = ls(all = TRUE)) 
+
+# Clear environmet of packages
+if(is.null(sessionInfo()$otherPkgs) == FALSE)lapply(paste("package:", names(sessionInfo()$otherPkgs), sep=""), detach, character.only = TRUE, unload = TRUE)
+```
+
+## Loading packages 
+```{r}
+library(tidyverse)
+library(gridExtra)
+library(janitor)
+library(janitor)
+library(colorspace)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(formattable)
+library(lubridate)
+library(dplyr)
+```
+
+## Loading and transforming data 
+```{r}
+loan_data <- read.csv("loan_3.csv", header = TRUE)
+```
+
+```{r}
+head(loan_data,20)
+```
+
+### Renaming columns
+```{r}
+names(loan_data)[names(loan_data) == "v1"] <- "Credit_Score"
+names(loan_data)[names(loan_data) == "v2"] <- "First_Payment_Date"
+names(loan_data)[names(loan_data) == "v3"] <- "First_Time_Homebuyer_Flag"
+names(loan_data)[names(loan_data) == "v4"] <- "Maturity_Date"
+names(loan_data)[names(loan_data) == "v5"] <- "MSA"
+names(loan_data)[names(loan_data) == "v6"] <- "MI%"
+names(loan_data)[names(loan_data) == "v7"] <- "Number_of_Units"
+names(loan_data)[names(loan_data) == "v8"] <- "Occupancy_Status"
+names(loan_data)[names(loan_data) == "v9"] <- "CLTV"
+names(loan_data)[names(loan_data) == "v10"] <- "DTI_Ratio"
+names(loan_data)[names(loan_data) == "v11"] <- "Original_UPB"
+names(loan_data)[names(loan_data) == "v12"] <- "Original_LTV"
+names(loan_data)[names(loan_data) == "v13"] <- "Original_Interest"
+names(loan_data)[names(loan_data) == "v14"] <- "Channel"
+names(loan_data)[names(loan_data) == "v15"] <- "PPM"
+names(loan_data)[names(loan_data) == "v16"] <- "Product_Type"
+names(loan_data)[names(loan_data) == "v17"] <- "State"
+names(loan_data)[names(loan_data) == "v18"] <- "Property_Type"
+names(loan_data)[names(loan_data) == "v19"] <- "Postal_Code"
+names(loan_data)[names(loan_data) == "v20"] <- "Loan_Sequence_Number"
+names(loan_data)[names(loan_data) == "v21"] <- "Loan_Purpose"
+names(loan_data)[names(loan_data) == "v22"] <- "Original_Loan_Term"
+names(loan_data)[names(loan_data) == "v23"] <- "Number_of_Borrowers"
+names(loan_data)[names(loan_data) == "v24"] <- "Seller_Name"
+names(loan_data)[names(loan_data) == "v25"] <- "Service_Name"
+names(loan_data)[names(loan_data) == "v26"] <- "Super_Conforming_Flag"
+names(loan_data)[names(loan_data) == "v27"] <- "Risk_Level"
+
+```
+
+```{r}
+str(loan_data)
+```
+
+```{r}
+summary(loan_data)
+```
+
+### Formatting variables
+```{r}
+#First Time Homebuyer (factor)
+loan_data$First_Time_Homebuyer_Flag <- as.factor(loan_data$First_Time_Homebuyer_Flag)
+
+#PPM (factor)
+loan_data$PPM <- as.factor(loan_data$PPM)
+
+#Postal Code (factor)
+loan_data$Postal_Code <- as.factor(loan_data$Postal_Code)
+
+#Loan Sequence Number (numeric)
+loan_data$Loan_Sequence_Number <- as.numeric(loan_data$Loan_Sequence_Number)
+
+#Number of Borrowers (factor)
+loan_data$Number_of_Borrowers <- as.factor(loan_data$Number_of_Borrowers)
+
+#Risk level (factor)
+loan_data$Risk_Level <- as.factor(loan_data$Risk_Level)
+
+```
+
+
+
+## Base EDA Step 1: Uni-variate non-graphical
++ Unordered but relatively clean data, each column is of variable type, each row is an observation of a loan request.
++ Potential redundancy in column 9 ("Original combined LTV") and column 12 ("Original LTV"). 
++ Concerns include the **amount of information that is not applicable or missing** (see column 3 "Homebuyer Flag"), which might influence what variables would be include in predictive modelling.
++ There are also high number of levels in the categorical variables (see postal code and property state), which might be difficult to visualize.
++ Potential areas of interest: **debt-to-income ratio** (preferrably in the lower %, usually in the 20s to 40s), **LTV** (preferrably in the lower %, usually in the 80s).  
+
+## Base EDA Step 2: Uni-variate graphical 
+
+### Categorical
+Note: Product type is not graphed as there's only one type (FRM)
+```{r}
+grid.arrange(
+  
+#First Time Homebuyer Flag
+ggplot(data = loan_data, mapping = aes(x = First_Time_Homebuyer_Flag)) + geom_bar(),
+
+#Occupancy Status
+ggplot(data = loan_data, mapping = aes(x = Occupancy_Status)) + geom_bar(),
+
+#Channel
+ggplot(data = loan_data, mapping = aes(x = Channel)) + geom_bar(), 
+
+#PPM 
+ggplot(data = loan_data, mapping = aes(x = PPM)) + geom_bar(), 
+
+#Property Type
+ggplot(data = loan_data, mapping = aes(x = Property_Type)) + geom_bar(), 
+
+#Loan Purpose
+ggplot(data = loan_data, mapping = aes(x = Loan_Purpose)) + geom_bar(), 
+
+#Number of Borrowers
+ggplot(data = loan_data, mapping = aes(x = Number_of_Borrowers)) + geom_bar(), 
+
+#Conforming Flag
+ggplot(data = loan_data, mapping = aes(x = Super_Conforming_Flag)) + geom_bar(),
+
+ncol = 2)
+
+```
+
+```{r}
+#Property State 
+ggplot(data = loan_data, mapping = aes(x = State)) + geom_bar()
+
+#Postal Code
+ggplot(data = loan_data, mapping = aes(x = Postal_Code)) + geom_bar()
+```
+Note: Variables that indicate location e.g. postal code, state, or MSA is not necessarily conducive to determing loan eligibility. If there's interest in which areas are requesting the most loans, the top 10 areas could be graphed for visualization. 
+
+### Quantitative
+Note: Graphing variables of interest only. 
+
++ Adjusting Outliers & Missing Values
+
+```{r}
+#Credit Score
+loan_data$Credit_Score[loan_data$Credit_Score == 9999] <- NA
+
+ggplot(data = loan_data, mapping = aes(x = Credit_Score)) +
+    geom_histogram()
+```
+
+```{r}
+#CLTV
+loan_data$CLTV[loan_data$CLTV == 999] <- NA
+
+ggplot(data = loan_data, mapping = aes(x = CLTV)) +
+    geom_histogram()
+```
+
+```{r}
+#DTI
+loan_data$DTI_Ratio[loan_data$DTI_Ratio == 999] <- NA
+
+ggplot(data = loan_data, mapping = aes(x = DTI_Ratio)) +
+    geom_histogram()
+```
+
+```{r}
+#Original Interest Rate
+ggplot(data = loan_data, mapping = aes(x = Original_Interest)) +
+    geom_histogram()
+```
+
+```{r}
+# Original Loan Term
+ggplot(data = loan_data, mapping = aes(x = Original_Loan_Term)) +
+    geom_histogram()
+```
+
+
+## Base EDA Step 3: Multi-variate non-graphical 
+### Categorical
+
++ First Time Homebuyer Flag.
++ Occupancy status.
++ PPM.
++ Property type.
++ Loan purpose.
++ Number of borrowers.
++ Conforming flag.
+
+```{r}
+#Flag & Occupancy Status
+loan_data %>%
+  tabyl(First_Time_Homebuyer_Flag, Occupancy_Status) %>%
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>%
+  adorn_rounding(2)
+```
+
++ The majority of customers are borrowing to pay off their primary residence.
++ There are more non-first-time home buyers borrowing than first-timers. 
+
+```{r}
+#Flag & Number of Borrowers
+loan_data %>%
+  tabyl(First_Time_Homebuyer_Flag, Number_of_Borrowers) %>%
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>%
+  adorn_rounding(2)
+```
+
+```{r}
+#Flag and Conformity
+loan_data %>%
+  tabyl(First_Time_Homebuyer_Flag, Super_Conforming_Flag) %>%
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>%
+  adorn_rounding(2)
+```
+
++ Non-conforming loans are rarely offered; instances of offer is for primary residence rather than investment property or second home.
++ Only 5 percent of first-time homeowners get offered non-conforming loans.
++ First time homeowners borrow for primary residence rather as investment properties
+
+### Quantitative 
+
+```{r}
+loan_data %>%
+  select_if(is.numeric) %>%
+  cor() %>%
+  round(2) %>%
+  kable()
+```
+
++ 0.63 correlation original interest and original loan term
++ 0.29 correlation original loan term and original LTV
++ 0.16 correlation original UPB and MSA
++ 0.19 original UPB and original loan term
+
+
+## Base EDA Step 4: Multi-variate graphical and Detailed Analysis
+### Categorical 
++ First Time Homebuyer Flag.
++ Occupancy status.
++ Property type.
++ Loan purpose.
++ Number of borrowers.
++ Conforming flag.
++ Risk level.
+
+
+```{r}
+# First Time Homebuyer & Property Type
+revised_hf <- c("Y", "N")
+loan_data %>%
+  filter(First_Time_Homebuyer_Flag %in% revised_hf) %>%
+  ggplot(mapping = aes(x = First_Time_Homebuyer_Flag, fill = Property_Type)) +
+  geom_bar(position = "dodge")
+```
+
+
+```{r}
+# First Time Homebuyer & Number of Borrowers
+loan_data %>%
+    filter(First_Time_Homebuyer_Flag %in% revised_hf) %>%
+  ggplot(mapping = aes(x = First_Time_Homebuyer_Flag, fill = Number_of_Borrowers)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# First Time Homebuyer & Conforming Flag
+loan_data %>%
+      filter(First_Time_Homebuyer_Flag %in% revised_hf) %>%
+  ggplot(mapping = aes(x = First_Time_Homebuyer_Flag, fill = Super_Conforming_Flag)) +
+  geom_bar(position = "dodge")
+```
+```{r}
+# First Time Homebuyer & Risk Level
+loan_data %>%
+      filter(First_Time_Homebuyer_Flag %in% revised_hf) %>%
+  ggplot(mapping = aes(x = First_Time_Homebuyer_Flag, fill = Risk_Level)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Primary Occupancy Status & Property Type
+occ_p <- c("P")
+
+loan_data %>%
+  filter(Occupancy_Status %in% occ_p) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Property_Type)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Investment/Second Occupancy Status & Property Type
+occ_is <- c("I", "S")
+loan_data %>%
+  filter(Occupancy_Status %in% occ_is) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Property_Type)) +
+  geom_bar(position = "dodge")
+```
+
+
+```{r}
+# Primary Occupancy Status & Loan Purpose
+occ_p <- c("P")
+
+loan_data %>%
+  filter(Occupancy_Status %in% occ_p) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Property_Type)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Investment/Second Occupancy Status & Loan Purpose
+occ_is <- c("I", "S")
+loan_data %>%
+  filter(Occupancy_Status %in% occ_is) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Loan_Purpose)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Primary Occupancy Status & Loan Purpose
+occ_p <- c("P")
+
+loan_data %>%
+  filter(Occupancy_Status %in% occ_p) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Number_of_Borrowers)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Investment/Second Occupancy Status & Loan Purpose
+occ_is <- c("I", "S")
+loan_data %>%
+  filter(Occupancy_Status %in% occ_is) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Number_of_Borrowers)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Primary Occupancy Status & Risk Level
+occ_p <- c("P")
+
+loan_data %>%
+  filter(Occupancy_Status %in% occ_p) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Risk_Level)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Investment/Second Occupancy Status & Risk Level
+occ_is <- c("I", "S")
+loan_data %>%
+  filter(Occupancy_Status %in% occ_is) %>%
+  ggplot(mapping = aes(x = Occupancy_Status, fill = Risk_Level)) +
+  geom_bar(position = "dodge")
+```
+
+
+```{r}
+# Loan Purpose & Number of Borrowers
+loan_data %>%
+  ggplot(mapping = aes(x = Loan_Purpose, fill = Number_of_Borrowers)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+# Loan Purpose & Conforming Flag
+loan_data %>%
+  ggplot(mapping = aes(x = Loan_Purpose, fill = Super_Conforming_Flag)) +
+  geom_bar(position = "dodge")
+```
+
+
+```{r}
+# Number of borrowers & Risk Level
+loan_data %>%
+  ggplot(mapping = aes(x = Number_of_Borrowers, fill = Risk_Level)) +
+  geom_bar(position = "dodge")
+```
+
+## Quantitative and Qualitative
++ Credit score.
++ CLTV.
++ DTI.
+
+# Visuals
+## Credit Score & Risk Level
+
+```{r}
+loan_data %>%
+  ggplot(mapping = aes(x = Credit_Score, y = Risk_Level, fill = Risk_Level)) +
+  geom_violin() +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "Low-risk borrowers sees high credit scores",
+       subtitle = "High-risk group sees a narrower range in credit score") +
+  ylab("Risk Level") +
+  xlab("Credit Score") + 
+  scale_fill_discrete(name = "Risk Level", labels = c("Low-risk", "High-risk")) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "right")
+```
+
+## Median DTI Ratio by Year & Risk Level 
+```{r}
+loan_data$Maturity_Date <- sub('(.{4})(.{2})', "\\1-\\2",loan_data$Maturity_Date)
+
+```
+
+```{r}
+loan_data$Maturity_Date <- paste0(loan_data$Maturity_Date, "-01")
+
+```
+
+```{r}
+# Transforming variables into dates
+loan_data$Maturity_Date <- ymd(loan_data$Maturity_Date)
+```
+
+```{r}
+complete.cases(loan_data$DTI_Ratio)
+x <- loan_data[complete.cases(loan_data$DTI_Ratio), ]
+x <- na.omit(loan_data)
+```
+
+```{r}
+x %>%
+  filter(State %in% "CA") %>%
+  mutate(Year = year(Maturity_Date)) %>%
+  group_by(Year, Risk_Level) %>%
+  summarise(median_cltv = median(CLTV)) %>%
+  ggplot(aes(x = Year, y = median_cltv, color = Risk_Level)) +
+  geom_line() +
+  theme_classic() +
+  scale_color_discrete(name = "Risk Level", labels = c("Low-risk", "High-risk")) +
+  labs(title = "Consistenly high CLTV ratio for high-risk borrowers in California",
+       subtitle = "Low-risk borrowers see erratic patterns in CLTV ratio") +
+  ylab("Median CLTV (in %)") +
+  xlab("Maturity Year") + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "right") 
+```
+
+```{r}
+x %>%
+  filter(State %in% "CA") %>%
+  ggplot(aes(x =  DTI_Ratio, fill = Risk_Level)) +
+  geom_boxplot() +
+  coord_flip() +
+  theme_classic() +
+  scale_fill_discrete(name = "Risk Level", labels = c("Low-risk", "High-risk")) +
+  labs(title = "Lower DTI ratio for low-risk borrowers in California",
+       subtitle = "Low-risk borrowers see wide DTI ratio range and various anomalies") +
+  xlab("Debt-to-Income Ratio (in %)") +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "right") 
+```
+
+# Regression Tree
+
+```{r}
+library(rpart)
+library(rpart.plot)
+library(forecast)
+library(caret)
+```
+```{r}
+names(loan_data)
+```
+
+```{r}
+loandata <- loan_data[ , c(2,4,6,8:28)]
+names(loandata)
+```
+
+```{r}
+head(loandata,10)
+```
+
+```{r}
+set.seed(666)
+
+train_index <- sample(1:nrow(loandata), 0.6 * nrow(loandata))
+valid_index <- setdiff(1:nrow(loandata), train_index)
+
+train_df <- loandata[train_index, ]
+valid_df <- loandata[valid_index, ]
+
+```
+
+```{r}
+str(loan_data)
+```
+
+```{r}
+summary(loan_data)
+```
+
+```{r}
+regress_tr <- rpart(Risk_Level ~ Credit_Score + MSA + Number_of_Units + DTI_Ratio + Original_UPB + Channel + PPM + Product_Type + State + Property_Type + Loan_Purpose + Original_Loan_Term, data = loandata, method = "anova")
+prp(regress_tr)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
